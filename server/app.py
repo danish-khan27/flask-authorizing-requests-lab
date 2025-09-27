@@ -4,6 +4,7 @@ from flask import Flask, make_response, request, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 
+
 from models import db, Article, User, ArticleSchema, UserSchema
 
 app = Flask(__name__)
@@ -87,12 +88,29 @@ class CheckSession(Resource):
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        # check if user is logged in
+        if not session.get('user_id'):
+            return {"message": "Unauthorized"}, 401
+
+        # query all member-only articles
+        articles = Article.query.filter_by(is_member_only=True).all()
+        articles_json = [ArticleSchema().dump(article) for article in articles]
+        return articles_json, 200
+
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        # check if user is logged in
+        if not session.get('user_id'):
+            return {"message": "Unauthorized"}, 401
+
+        # query a single member-only article
+        article = Article.query.filter_by(id=id, is_member_only=True).first()
+        if not article:
+            return {"message": "Article not found"}, 404
+
+        return ArticleSchema().dump(article), 200
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
